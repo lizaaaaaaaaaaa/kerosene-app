@@ -7,7 +7,7 @@ import {
 
 // Cloudflare Pages のURLに合わせる
 // 例: https://oil-app.pages.dev/api/sync
-const SYNC_ENDPOINT = 'https://kerosene-app.pages.dev/api/sync'
+const SYNC_ENDPOINT = '/api/sync'
 
 /**
  * クラウドから最新JSONを取得してDexieに流し込む（ローカル上書き）
