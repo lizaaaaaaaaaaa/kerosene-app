@@ -1,0 +1,165 @@
+// src/api/predict-next/worker/index.js
+import OpenAI from "openai";
+
+const ISO_YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * タンク種別からざっくりした周期日数を返す。
+ * A=38, B=42, C=51。なければ fallback（既定 42 日）
+ */
+function cycleDaysFromTank(
+  tankType: string | null | undefined,
+  fallback = 42
+): number {
+  if (tankType === "A") return 38;
+  if (tankType === "B") return 42;
+  if (tankType === "C") return 51;
+  return fallback;
+}
+
+/**
+ * JST 前提で YYYY-MM-DD に days 日足す。
+ */
+function addDaysJst(ymd: string, days: number): string {
+  const d = new Date(`${ymd}T00:00:00+09:00`);
+  d.setDate(d.getDate() + Number(days || 0));
+  // JST(+9h) に寄せて YYYY-MM-DD を返す
+  const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  return j.toISOString().slice(0, 10);
+}
+
+/**
+ * 共通レスポンスヘッダ（JSON）
+ */
+function jsonResponse(body: unknown, init?: ResponseInit): Response {
+  return new Response(JSON.stringify(body), {
+    ...init,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      ...(init?.headers || {}),
+    },
+  });
+}
+
+export default {
+  async fetch(request: Request, env: any): Promise<Response> {
+    if (request.method !== "POST") {
+      return jsonResponse(
+        { ok: false, message: "method not allowed" },
+        { status: 405 }
+      );
+    }
+
+    // ---- 入力 JSON パース ----
+    let body: any;
+    try {
+      body = await request.json();
+    } catch (e) {
+      console.warn("predict-next: invalid json", e);
+      return jsonResponse(
+        { ok: false, message: "invalid json" },
+        { status: 400 }
+      );
+    }
+
+    const {
+      name,
+      capacity,
+      usage,
+      tankType,
+      lastDate,
+      season,
+    }: {
+      name?: string;
+      capacity?: number;
+      usage?: number;
+      tankType?: string;
+      lastDate?: string;
+      season?: string;
+    } = body || {};
+
+    // ---- 必須パラメータのバリデーション ----
+    if (!lastDate || typeof lastDate !== "string" || !ISO_YMD.test(lastDate)) {
+      return jsonResponse(
+        { ok: false, message: "lastDate must be YYYY-MM-DD" },
+        { status: 400 }
+      );
+    }
+
+    const safeCapacity =
+      typeof capacity === "number" && Number.isFinite(capacity)
+        ? capacity
+        : null;
+    const safeUsage =
+      typeof usage === "number" && Number.isFinite(usage) ? usage : null;
+    const safeTankType =
+      typeof tankType === "string" && tankType ? tankType : null;
+    const safeSeason =
+      typeof season === "string" && season ? season : "other";
+
+    // ---- OpenAI クライアント ----
+    const openai = new OpenAI({
+      apiKey: env.OPENAI_API_KEY,
+      baseURL: `https://gateway.ai.cloudflare.com/v1/${env.CF_ACCOUNT_ID}/${env.GATEWAY_ID}/openai`,
+    });
+
+    // ---- プロンプト組み立て ----
+    const prompt = [
+      "あなたは灯油配達業者のスケジューラーです。",
+      "以下の情報から、次回の配達日を1日だけ提案してください。",
+      "",
+      `- 顧客名: ${name || "（匿名）"}`,
+      `- タンク種別: ${safeTankType || "不明"}`,
+      `- タンク容量: ${
+        safeCapacity != null ? `${safeCapacity} L` : "不明"
+      }`,
+      `- 想定1ヶ月あたり使用量: ${
+        safeUsage != null ? `${safeUsage} L/月` : "不明"
+      }`,
+      `- 直近の配達日（JST）: ${lastDate}`,
+      `- 現在の季節: ${safeSeason}（winter=12〜2月, summer=6〜8月, other=その他）`,
+      "",
+      "出力条件:",
+      "1. 回答は YYYY-MM-DD 形式の日付のみを1行だけ返してください。",
+      "2. 説明文や前後の文章、記号は一切付けないでください。",
+      "3. 妥当な日付が特定できない場合は、直近の配達日からおおよそ 40〜50 日後を目安にしてください。",
+    ].join("\n");
+
+    let iso: string | null = null;
+
+    try {
+      const resp = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "あなたは灯油配達計画を提案するアシスタントです。",
+          },
+          { role: "user", content: prompt },
+        ],
+        max_tokens: 50,
+      });
+
+      const raw = resp.choices?.[0]?.message?.content?.trim() ?? "";
+      const m = raw.match(ISO_YMD);
+      if (m) {
+        iso = m[0];
+      } else {
+        console.warn("predict-next: no ISO date in response", raw);
+      }
+    } catch (e) {
+      console.error("predict-next: openai error", e);
+      // ここで throw せず、後段のフォールバックに流す
+    }
+
+    // ---- モデル出力が取れなかった場合のフォールバック ----
+    if (!iso) {
+      const fallbackDays = cycleDaysFromTank(safeTankType, 42);
+      iso = addDaysJst(lastDate, fallbackDays);
+    }
+
+    // フロントの Reception.tsx は { nextDate } だけ見ているので、
+    // ok フラグはあってもなくても動く（互換性維持のため追加だけ）
+    return jsonResponse({ ok: true, nextDate: iso });
+  },
+};

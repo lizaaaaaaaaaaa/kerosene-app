@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- マニフェストとアイコン（PWA用）。VitePWAでも自動注入されますが明示で残してOK -->
+    <link rel="manifest" href="/assets/manifest-BJIThyPL.webmanifest">
+    <link rel="icon" href="/assets/favicon-B_SY1GJM.ico">
+    <meta name="theme-color" content="#0ea5e9" />
+
+    <title>灯油配達（PWA）</title>
+    <script type="module" crossorigin src="/assets/index-D9sRMrBU.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CIGW-MKW.css">
+  <link rel="manifest" href="/manifest.webmanifest"></head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Vite のエントリ -->
+
+    <!-- ❌ 旧: 手動 Service Worker 登録と CDN Leaflet CSS は不要なので削除
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" ... />
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
+    -->
+  </body>
+</html>

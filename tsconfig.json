@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+
+    // Viteのエイリアス（既存設定を維持）
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] },
+
+    // ★ 型を統一：Workers / Vite / Node
+    "types": ["@cloudflare/workers-types", "vite/client", "node"],
+
+    // 任意：TS 6 系の非推奨警告を抑制（必要なら残す）
+    "ignoreDeprecations": "6.0"
+  },
+
+  // ★ Cloudflare Pages Functions の型解決のために functions を追加
+  "include": ["src", "functions", "vite.config.ts"],
+  "exclude": ["dist", "node_modules"]
+}
