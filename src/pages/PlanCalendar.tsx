@@ -1,7 +1,14 @@
 // src/pages/PlanCalendar.tsx
 import React, { useEffect, useMemo, useState } from 'react'
-import { db, Customer, getMonthlyPlanMap, MonthlyPlanItem, buildMonthlyPlanByThreshold } from '@/db'
+import {
+  db,
+  Customer,
+  getMonthlyPlanMap,
+  MonthlyPlanItem,
+  buildMonthlyPlanByThreshold,
+} from '@/db'
 import { useNowYMJST, nowYMJST } from '@/utils/time'
+import { extractCityForDisplay } from '@/utils/address'
 
 type PlanRow = {
   customerId: number
@@ -9,7 +16,6 @@ type PlanRow = {
   city: string
   name: string
   address: string
-  // reason は表示しないので削除
   routeOrder?: number
 }
 
@@ -25,14 +31,6 @@ function startOfMonth(y: number, m: number) {
 }
 function endOfMonth(y: number, m: number) {
   return new Date(y, m, 0)
-}
-
-function extractCity(address: string): string {
-  if (!address) return ''
-  const m = address.match(/^.*?(市|区|町|村)/)
-  if (m) return m[0]
-  const m2 = address.match(/^..*?[市区郡]/)
-  return m2 ? m2[0] : address
 }
 
 export default function PlanCalendar() {
@@ -59,7 +57,7 @@ export default function PlanCalendar() {
   const loadMonth = async (y: number, m: number) => {
     setLoading(true)
     try {
-      // まず掃除＆再生成（db.ts 側で「過去配送日ベース自動予測」による plans を再構築）
+      // 「過去配送日ベース自動予測」で plans を再構築
       await buildMonthlyPlanByThreshold()
 
       const mp = await getMonthlyPlanMap({ y, m }, 1)
@@ -80,7 +78,8 @@ export default function PlanCalendar() {
         const row: PlanRow = {
           customerId: Number(c.id),
           nextDate: iso,
-          city: (c.city && String(c.city)) || extractCity(String(c.address)),
+          // 県名・郡を削って「平生町曽根」「田布施町波野」などに整形
+          city: (c.city && String(c.city)) || extractCityForDisplay(String(c.address)),
           name: String(c.name ?? ''),
           address: String(c.address ?? ''),
         }
@@ -136,6 +135,7 @@ export default function PlanCalendar() {
     const totalDays = last.getDate()
     const matrix: DayCell[][] = []
     let week: DayCell[] = []
+
     for (let i = 0; i < firstWeekday; i++) week.push({ dateISO: '', rows: [] })
     for (let d = 1; d <= totalDays; d++) {
       const iso = toISO(new Date(year, month - 1, d))
@@ -228,7 +228,6 @@ export default function PlanCalendar() {
                       borderBottom: '1px solid #f3f3f3',
                       borderRight: '1px solid #f7f7f7',
                       padding: 6,
-                      // セル外へはみ出す描画を強制的に切る
                       overflow: 'hidden',
                     }}
                   >
@@ -243,7 +242,6 @@ export default function PlanCalendar() {
                             onClick={() => onClickRow(r)}
                             title={r.name}
                             style={{
-                              // セルの横幅以上に広がらないよう固定
                               display: 'inline-block',
                               maxWidth: '100%',
                               fontSize: 12,
@@ -288,45 +286,163 @@ export default function PlanCalendar() {
             style={{
               background: '#fff',
               borderRadius: 12,
-              padding: 16,
-              width: 440,
+              padding: '16px 20px',
+              // PC では 480px、スマホでは画面幅 96% 以内に収める
+              width: 'min(480px, 96vw)',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxSizing: 'border-box',
             }}
           >
-            <h3 style={{ marginTop: 0 }}>予測詳細</h3>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <h3 style={{ marginTop: 0, marginBottom: 12 }}>予測詳細</h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 16 }}>
               <tbody>
                 <tr>
-                  <td style={{ width: 120, opacity: 0.7 }}>予測日</td>
-                  <td>{detail.row.nextDate}</td>
+                  <td
+                    style={{
+                      width: 120,
+                      opacity: 0.7,
+                      padding: '4px 8px',
+                      verticalAlign: 'top',
+                    }}
+                  >
+                    予測日
+                  </td>
+                  <td
+                    style={{
+                      padding: '4px 8px',
+                      wordBreak: 'break-word',
+                      whiteSpace: 'normal',
+                    }}
+                  >
+                    {detail.row.nextDate}
+                  </td>
                 </tr>
                 <tr>
-                  <td style={{ opacity: 0.7 }}>名前</td>
-                  <td>{detail.row.name}</td>
+                  <td
+                    style={{
+                      width: 120,
+                      opacity: 0.7,
+                      padding: '4px 8px',
+                      verticalAlign: 'top',
+                    }}
+                  >
+                    名前
+                  </td>
+                  <td
+                    style={{
+                      padding: '4px 8px',
+                      wordBreak: 'break-word',
+                      whiteSpace: 'normal',
+                    }}
+                  >
+                    {detail.row.name}
+                  </td>
                 </tr>
                 <tr>
-                  <td style={{ opacity: 0.7 }}>市区町村</td>
-                  <td>{detail.row.city}</td>
+                  <td
+                    style={{
+                      width: 120,
+                      opacity: 0.7,
+                      padding: '4px 8px',
+                      verticalAlign: 'top',
+                    }}
+                  >
+                    市区町村
+                  </td>
+                  <td
+                    style={{
+                      padding: '4px 8px',
+                      wordBreak: 'break-word',
+                      whiteSpace: 'normal',
+                    }}
+                  >
+                    {detail.row.city}
+                  </td>
                 </tr>
                 <tr>
-                  <td style={{ opacity: 0.7 }}>住所</td>
-                  <td>{detail.row.address}</td>
+                  <td
+                    style={{
+                      width: 120,
+                      opacity: 0.7,
+                      padding: '4px 8px',
+                      verticalAlign: 'top',
+                    }}
+                  >
+                    住所
+                  </td>
+                  <td
+                    style={{
+                      padding: '4px 8px',
+                      wordBreak: 'break-word', // 長い住所も折り返し
+                      whiteSpace: 'normal',
+                    }}
+                  >
+                    {detail.row.address}
+                  </td>
                 </tr>
-                {/* 理由行は削除 */}
                 {detail.customer && (
                   <>
                     <tr>
-                      <td style={{ opacity: 0.7 }}>電話</td>
-                      <td>{detail.customer.phone ?? '-'}</td>
+                      <td
+                        style={{
+                          width: 120,
+                          opacity: 0.7,
+                          padding: '4px 8px',
+                          verticalAlign: 'top',
+                        }}
+                      >
+                        電話
+                      </td>
+                      <td
+                        style={{
+                          padding: '4px 8px',
+                          wordBreak: 'break-word',
+                          whiteSpace: 'normal',
+                        }}
+                      >
+                        {detail.customer.phone ?? '-'}
+                      </td>
                     </tr>
                     <tr>
-                      <td style={{ opacity: 0.7 }}>タンク</td>
-                      <td>
+                      <td
+                        style={{
+                          width: 120,
+                          opacity: 0.7,
+                          padding: '4px 8px',
+                          verticalAlign: 'top',
+                        }}
+                      >
+                        タンク
+                      </td>
+                      <td
+                        style={{
+                          padding: '4px 8px',
+                          wordBreak: 'break-word',
+                          whiteSpace: 'normal',
+                        }}
+                      >
                         {detail.customer.tankType} / {detail.customer.tankCapacity}L
                       </td>
                     </tr>
                     <tr>
-                      <td style={{ opacity: 0.7 }}>使用量(L/月・受付値)</td>
-                      <td>
+                      <td
+                        style={{
+                          width: 120,
+                          opacity: 0.7,
+                          padding: '4px 8px',
+                          verticalAlign: 'top',
+                        }}
+                      >
+                        使用量(L/月・受付値)
+                      </td>
+                      <td
+                        style={{
+                          padding: '4px 8px',
+                          wordBreak: 'break-word',
+                          whiteSpace: 'normal',
+                        }}
+                      >
                         {detail.customer.usage != null
                           ? `${detail.customer.usage} L/月`
                           : '-'}
@@ -341,7 +457,7 @@ export default function PlanCalendar() {
                 display: 'flex',
                 justifyContent: 'flex-end',
                 gap: 8,
-                marginTop: 12,
+                marginTop: 16,
               }}
             >
               <button onClick={() => setOpen(false)}>閉じる</button>

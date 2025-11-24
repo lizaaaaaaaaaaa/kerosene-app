@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { getMonthlyPlanMap, buildMonthlyPlanByThreshold } from '@/db'
 import { useNowYMJST, nowYMJST } from '@/utils/time'
+import { extractCityForDisplay } from '@/utils/address'
 
 type PlanRow = {
   nextDateISO: string
@@ -16,15 +17,6 @@ type PlanRow = {
 
 function pad2(n: number) {
   return String(n).padStart(2, '0')
-}
-
-// 住所から市区町村っぽい部分を抽出（city 未保存のときの補助）
-function extractCity(address: string): string {
-  if (!address) return ''
-  const m = address.match(/^.*?(市|区|町|村)/)
-  if (m) return m[0]
-  const m2 = address.match(/^..*?[市区郡]/)
-  return m2 ? m2[0] : address
 }
 
 // セクションキー用：空白を除去して安定化
@@ -62,7 +54,10 @@ export default function Plan() {
     for (const [, list] of mp.entries()) {
       for (const it of list) {
         const c = it.customer
-        const city = (c.city && String(c.city)) || extractCity(String(c.address))
+        const city =
+          (c.city && String(c.city)) ||
+          extractCityForDisplay(String(c.address))
+
         tmp.push({
           nextDateISO: it.dateISO, // 'YYYY-MM-DD'
           city,
@@ -135,7 +130,7 @@ export default function Plan() {
     return rows.filter((r) => r.nextDateISO.startsWith(ymStr))
   }, [rows, year, month])
 
-  // ★ 市区町村でグループ化（表示順：市区町村 → 日付 → 氏名）
+  // 市区町村でグループ化（表示順：市区町村 → 日付 → 氏名）
   const groupedByCity = useMemo(() => {
     const map = new Map<string, PlanRow[]>()
     for (const r of filtered) {
@@ -236,7 +231,7 @@ export default function Plan() {
           <div key={g.city} style={{ marginBottom: 20 }}>
             <h3 style={{ margin: '12px 0 8px', fontSize: 18 }}>📍 {g.city}</h3>
 
-            {/* ★ スマホではテーブルを横スクロールさせるコンテナ */}
+            {/* スマホではテーブルを横スクロールさせるコンテナ */}
             <div
               style={{
                 width: '100%',
