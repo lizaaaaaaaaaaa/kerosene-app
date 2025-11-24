@@ -8,11 +8,10 @@ type PlanRow = {
   city: string
   name: string
   address: string
-  tankType?: string // タンク種別（A/B/C など）
-  tankCapacity?: number // タンク容量
-  usage?: number // 使用量（Customer.usage = 受付での 1ヶ月あたり使用量[L/月]）
+  tankType?: string      // タンク種別（A/B/C など）
+  tankCapacity?: number  // タンク容量
+  usage?: number         // 使用量（Customer.usage = 受付での 1ヶ月あたり使用量[L/月]）
   routeOrder: number
-  // reason?: string // 理由は内部では持てるが画面には出さない
 }
 
 function pad2(n: number) {
@@ -112,8 +111,8 @@ export default function Plan() {
     ;(async () => {
       setYear(ym.year)
       setMonth(ym.month)
-      await buildMonthlyPlanByThreshold() // ① 再計算（DB更新）
-      await reload() // ② 自画面更新
+      await buildMonthlyPlanByThreshold()             // ① 再計算（DB更新）
+      await reload()                                  // ② 自画面更新
       window.dispatchEvent(new Event('plan-refresh')) // ③ カレンダー等へ反映
     })()
   }, [ym.year, ym.month])
@@ -136,7 +135,7 @@ export default function Plan() {
     return rows.filter((r) => r.nextDateISO.startsWith(ymStr))
   }, [rows, year, month])
 
-  // 市区町村でグループ化
+  // ★ 市区町村でグループ化（表示順：市区町村 → 日付 → 氏名）
   const groupedByCity = useMemo(() => {
     const map = new Map<string, PlanRow[]>()
     for (const r of filtered) {
@@ -160,7 +159,7 @@ export default function Plan() {
   return (
     <div
       style={{
-        padding: '8px 12px', // ★ スマホの左右に少し余白
+        padding: '8px 12px', // スマホの左右に少し余白
         maxWidth: 1100,
         margin: '0 auto',
         fontSize: 14,
@@ -240,6 +239,7 @@ export default function Plan() {
             {/* ★ スマホではテーブルを横スクロールさせるコンテナ */}
             <div
               style={{
+                width: '100%',
                 overflowX: 'auto',
                 WebkitOverflowScrolling: 'touch',
                 border: '1px solid #eee',
@@ -249,28 +249,72 @@ export default function Plan() {
               <table
                 style={{
                   width: '100%',
-                  minWidth: 720, // スマホでは横スワイプ、それ以外はそのまま
+                  minWidth: 700, // スマホでは横スワイプ、それ以外はそのまま
                   borderCollapse: 'collapse',
                   background: '#fff',
                 }}
               >
                 <thead>
                   <tr style={{ background: '#f8f8f8' }}>
-                    <th style={{ textAlign: 'right', width: 40, padding: '6px 4px' }}>
+                    <th
+                      style={{
+                        textAlign: 'right',
+                        width: 40,
+                        padding: '6px 4px',
+                      }}
+                    >
                       順
                     </th>
-                    <th style={{ textAlign: 'left', padding: '6px 4px', whiteSpace: 'nowrap' }}>
+                    <th
+                      style={{
+                        textAlign: 'left',
+                        padding: '6px 4px',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
                       配達日
                     </th>
-                    <th style={{ textAlign: 'left', padding: '6px 4px' }}>名前</th>
-                    <th style={{ textAlign: 'left', padding: '6px 4px' }}>住所</th>
-                    <th style={{ textAlign: 'left', padding: '6px 4px', whiteSpace: 'nowrap' }}>
+                    <th
+                      style={{
+                        textAlign: 'left',
+                        padding: '6px 4px',
+                      }}
+                    >
+                      名前
+                    </th>
+                    <th
+                      style={{
+                        textAlign: 'left',
+                        padding: '6px 4px',
+                      }}
+                    >
+                      住所
+                    </th>
+                    <th
+                      style={{
+                        textAlign: 'left',
+                        padding: '6px 4px',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
                       タンク種別
                     </th>
-                    <th style={{ textAlign: 'left', padding: '6px 4px', whiteSpace: 'nowrap' }}>
+                    <th
+                      style={{
+                        textAlign: 'left',
+                        padding: '6px 4px',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
                       タンク容量
                     </th>
-                    <th style={{ textAlign: 'left', padding: '6px 4px', whiteSpace: 'nowrap' }}>
+                    <th
+                      style={{
+                        textAlign: 'left',
+                        padding: '6px 4px',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
                       使用量(L/月・受付値)
                     </th>
                   </tr>
@@ -287,22 +331,52 @@ export default function Plan() {
                       >
                         {r.routeOrder}
                       </td>
-                      <td style={{ padding: '4px 4px', borderTop: '1px solid #eee' }}>
+                      <td
+                        style={{
+                          padding: '4px 4px',
+                          borderTop: '1px solid #eee',
+                        }}
+                      >
                         {r.nextDateISO}
                       </td>
-                      <td style={{ padding: '4px 4px', borderTop: '1px solid #eee' }}>
+                      <td
+                        style={{
+                          padding: '4px 4px',
+                          borderTop: '1px solid #eee',
+                        }}
+                      >
                         {r.name}
                       </td>
-                      <td style={{ padding: '4px 4px', borderTop: '1px solid #eee' }}>
+                      <td
+                        style={{
+                          padding: '4px 4px',
+                          borderTop: '1px solid #eee',
+                        }}
+                      >
                         {r.address}
                       </td>
-                      <td style={{ padding: '4px 4px', borderTop: '1px solid #eee' }}>
+                      <td
+                        style={{
+                          padding: '4px 4px',
+                          borderTop: '1px solid #eee',
+                        }}
+                      >
                         {r.tankType ?? '-'}
                       </td>
-                      <td style={{ padding: '4px 4px', borderTop: '1px solid #eee' }}>
+                      <td
+                        style={{
+                          padding: '4px 4px',
+                          borderTop: '1px solid #eee',
+                        }}
+                      >
                         {r.tankCapacity != null ? `${r.tankCapacity}L` : '-'}
                       </td>
-                      <td style={{ padding: '4px 4px', borderTop: '1px solid #eee' }}>
+                      <td
+                        style={{
+                          padding: '4px 4px',
+                          borderTop: '1px solid #eee',
+                        }}
+                      >
                         {r.usage != null ? `${r.usage}L` : '-'}
                       </td>
                     </tr>

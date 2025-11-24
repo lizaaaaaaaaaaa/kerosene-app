@@ -18,7 +18,7 @@ type FlatOrderUI = {
     phone: string
     tankType?: TankType
     tankCapacity?: number
-    usage?: number // ★ 1ヶ月の使用量（目安）[L/月] を履歴からも拾えるように
+    usage?: number // 1ヶ月の使用量（目安）[L/月] を履歴からも拾えるように
   }
   quantity?: number
 }
@@ -30,7 +30,7 @@ type CustomerGroup = {
   phone: string
   tankType?: TankType
   tankCapacity?: number
-  usage?: number // ★ 受付へ渡す用
+  usage?: number // 受付へ渡す用
   orders: { date: string; quantity?: number; orderId: string }[]
 }
 
@@ -156,7 +156,7 @@ export default function History() {
     window.dispatchEvent(new Event('oil-refresh'))
   }
 
-  // ★ 履歴 → 受付フォーム へ反映するためのセレクタ保存
+  // 履歴 → 受付フォーム へ反映するためのセレクタ保存
   const setReceptionPrefill = (g: CustomerGroup) => {
     try {
       const payload = {
@@ -181,7 +181,7 @@ export default function History() {
       style={{
         fontSize: 18,
         lineHeight: 1.6,
-        padding: '8px 12px',   // ★ スマホで左右に余白
+        padding: '8px 12px', // スマホで左右に余白
         maxWidth: 960,
         margin: '0 auto',
       }}
@@ -222,8 +222,8 @@ export default function History() {
                 style={{
                   border: '1px solid #e5e5e5',
                   borderRadius: 8,
-                  padding: 12,          // ★ 少しコンパクトに
-                  marginBottom: 12,     // ★ スマホで詰めめ
+                  padding: 12,
+                  marginBottom: 12,
                   background: '#fff',
                   display: 'flex',
                   flexDirection: 'column',
@@ -260,13 +260,15 @@ export default function History() {
                     <strong>タンク容量：</strong>
                     {g.tankCapacity ?? '-'}L
                   </div>
+
+                  {/* 右側ボタン群：スマホでは折り返し可 */}
                   <div
                     style={{
                       marginLeft: 'auto',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 10,
-                      whiteSpace: 'nowrap',
+                      gap: 8,
+                      flexWrap: 'wrap', // ★ 折り返しOK
                     }}
                   >
                     <span>
@@ -311,8 +313,14 @@ export default function History() {
                   >
                     <h4 style={{ margin: '4px 0 8px', fontSize: 18 }}>登録情報</h4>
 
-                    {/* ★ スマホで横スクロールできるようにするラッパ */}
-                    <div style={{ width: '100%', overflowX: 'auto' }}>
+                    {/* スマホで横スクロールできるラッパ */}
+                    <div
+                      style={{
+                        width: '100%',
+                        overflowX: 'auto',
+                        WebkitOverflowScrolling: 'touch',
+                      }}
+                    >
                       <table
                         style={{
                           width: '100%',
